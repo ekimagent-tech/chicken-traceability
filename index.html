@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>麻雞村清遠雞溯源追蹤系統</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://unpkg.com/@aspect-dev/zxing-browser@0.20.0/build/index.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #2E7D32;
+      --secondary: #FF8F00;
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --text-primary: #212121;
+      --text-secondary: #757575;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --error: #E53935;
+      --status-farming: #66BB6A;
+      --status-shipped: #FF8F00;
+      --status-transit: #2196F3;
+      --status-received: #8E24AA;
+      --status-served: #2E7D32;
+      --radius-card: 12px;
+      --radius-btn: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 16px;
+      padding-bottom: 60px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .hidden { display: none !important; }
+    
+    /* Login Page */
+    #login-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, var(--primary) 0%, #1B5E20 100%);
+    }
+    .login-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .login-logo {
+      font-size: 64px;
+      margin-bottom: 8px;
+    }
+    .login-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .login-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius-btn);
+      font-size: 16px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius-btn);
+      font-size: 16px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: #1B5E20; }
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: #E65100; }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    .btn-outline:hover { background: var(--primary); color: white; }
+    .demo-roles {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+    }
+    .demo-roles-title {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .role-chips {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .role-chip {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    .role-chip:hover, .role-chip.selected {
+      border-color: var(--primary);
+      background: #E8F5E9;
+      color: var(--primary);
+    }
+    
+    /* App Shell */
+    .app-header {
+      position: sticky;
+      top: 0;
+      background: var(--primary);
+      color: white;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+    }
+    .app-header h1 {
+      font-size: 18px;
+      font-weight: 500;
+      flex: 1;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .page { padding: 16px; }
+    
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      display: flex;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 4px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      cursor: pointer;
+      transition: color 0.2s;
+      border: none;
+      background: none;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-item .material-icons { font-size: 24px; }
+    
+    /* Home Page */
+    .welcome-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #1B5E20 100%);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      color: white;
+      margin-bottom: 16px;
+    }
+    .welcome-card .logo { font-size: 48px; text-align: center; margin-bottom: 8px; }
+    .welcome-card h2 { font-size: 18px; margin-bottom: 4px; }
+    .welcome-card .role-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+      display: inline-block;
+      margin-top: 8px;
+    }
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quick-action {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 16px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: none;
+      font-family: inherit;
+    }
+    .quick-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .quick-action .material-icons { font-size: 32px; color: var(--primary); margin-bottom: 4px; }
+    .quick-action span { font-size: 13px; color: var(--text-primary); }
+    .demo-labels-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    .label-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .label-card:hover { transform: translateY(-2px); }
+    .label-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .label-id {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 15px;
+    }
+    .label-info {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .label-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: white;
+    }
+    .status-farming { background: var(--status-farming); }
+    .status-shipped { background: var(--status-shipped); }
+    .status-transit { background: var(--status-transit); }
+    .status-received { background: var(--status-received); }
+    .status-served { background: var(--status-served); }
+    .status-error { background: var(--error); }
+    
+    /* Scan Page */
+    .scan-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .scan-tab {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-btn);
+      text-align: center;
+      cursor: pointer;
+      font-family: inherit;
+      background: white;
+      transition: all 0.2s;
+    }
+    .scan-tab.active {
+      border-color: var(--primary);
+      background: #E8F5E9;
+      color: var(--primary);
+    }
+    .scan-content {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .scan-icon {
+      font-size: 80px;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .scan-instructions {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .scan-animation {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin: 16px 0;
+    }
+    .scan-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: pulse 1s infinite;
+    }
+    .scan-dot:nth-child(2) { animation-delay: 0.2s; }
+    .scan-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+    .scanner-container {
+      position: relative;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: #000;
+    }
+    .scanner-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .scanner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border: 3px solid var(--secondary);
+      border-radius: 8px;
+    }
+    #camera-select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius-btn);
+      font-size: 14px;
+    }
+    
+    /* Result Page */
+    .result-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .result-header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 16px;
+    }
+    .result-icon {
+      font-size: 48px;
+      color: var(--success);
+      margin-bottom: 8px;
+    }
+    .result-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success);
+    }
+    .result-detail {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .result-detail:last-child { border-bottom: none; }
+    .result-label { color: var(--text-secondary); font-size: 14px; }
+    .result-value { font-weight: 500; font-size: 14px; }
+    .result-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    /* Upload Page */
+    .form-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .form-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius-btn);
+      font-size: 16px;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-input[readonly] {
+      background: #f5f5f5;
+      color: var(--text-secondary);
+    }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .event-type-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .event-type-item {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: var(--radius-btn);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      background: white;
+      font-family: inherit;
+    }
+    .event-type-item:hover { border-color: var(--primary); }
+    .event-type-item.selected {
+      border-color: var(--primary);
+      background: #E8F5E9;
+      color: var(--primary);
+    }
+    .offline-notice {
+      background: #FFF3E0;
+      border: 1px solid var(--warning);
+      border-radius: var(--radius-btn);
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #E65100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Trace Page */
+    .trace-header {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .trace-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .trace-header-title .material-icons { color: var(--primary); }
+    .trace-header-title h3 { font-size: 16px; font-weight: 500; }
+    .trace-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .trace-info-item { color: var(--text-secondary); }
+    .trace-info-value { color: var(--text-primary); font-weight: 500; }
+    .timeline {
+      position: relative;
+      padding-left: 32px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #ddd;
+    }
+    .timeline-item {
+      position: relative;
+      padding-bottom: 24px;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot {
+      position: absolute;
+      left: -32px;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      z-index: 1;
+    }
+    .timeline-dot.latest {
+      background: var(--success);
+      box-shadow: 0 0 0 4px #C8E6C9;
+    }
+    .timeline-content {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .timeline-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .timeline-time {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .timeline-org {
+      font-size: 13px;
+      color: var(--primary);
+    }
+    .timeline-person {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .timeline-remarks {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      padding: 8px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    
+    /* Profile Page */
+    .profile-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 12px;
+    }
+    .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .profile-role { color: var(--text-secondary); font-size: 14px; margin-bottom: 4px; }
+    .profile-org { color: var(--primary); font-size: 14px; }
+    .menu-section {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: inherit;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:hover { background: #f9f9f9; }
+    .menu-item .material-icons { color: var(--primary); margin-right: 12px; }
+    .menu-item-arrow { margin-left: auto; color: var(--text-secondary); }
+    .btn-logout {
+      background: var(--error);
+      color: white;
+    }
+    .btn-logout:hover { background: #C62828; }
+    
+    /* Role Switch Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
+    }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .role-option {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-btn);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .role-option:hover { border-color: var(--primary); }
+    .role-option.selected {
+      border-color: var(--primary);
+      background: #E8F5E9;
+    }
+    .role-option-radio {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-radius: 50%;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .role-option.selected .role-option-radio {
+      border-color: var(--primary);
+    }
+    .role-option.selected .role-option-radio::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+    .role-option-text { flex: 1; }
+    .role-option-name { font-weight: 500; }
+    .role-option-org { font-size: 13px; color: var(--text-secondary); }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      z-index: 300;
+      animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    
+    /* Language Switcher */
+    .lang-switch {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .lang-btn {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .lang-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* About page */
+    .about-content {
+      text-align: center;
+      padding: 32px;
+    }
+    .about-logo { font-size: 64px; margin-bottom: 16px; }
+    .about-version { color: var(--text-secondary); margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="login-page">
+    <div class="login-card">
+      <div class="login-logo">🐔</div>
+      <div class="login-title">麻雞村清遠雞溯源系統</div>
+      <div class="login-subtitle">Traceability Demo v1.0</div>
+      <div class="input-group">
+        <input type="text" id="login-username" placeholder="帳號" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <input type="password" id="login-password" placeholder="密碼" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">
+        <span class="material-icons">login</span> 登入
+      </button>
+      <button class="btn btn-secondary" onclick="handleDemoLogin()">
+        <span class="material-icons">stars</span> 一鍵示範登入
+      </button>
+      <div class="demo-roles">
+        <div class="demo-roles-title">快速選擇示範角色：</div>
+        <div class="role-chips">
+          <button class="role-chip" data-role="FARM" onclick="selectRole('FARM')">🏠 養殖場</button>
+          <button class="role-chip" data-role="LOGISTICS" onclick="selectRole('LOGISTICS')">🚚 物流</button>
+          <button class="role-chip" data-role="RESTAURANT" onclick="selectRole('RESTAURANT')">🍽️ 餐廳</button>
+          <button class="role-chip" data-role="CUSTOMER" onclick="selectRole('CUSTOMER')">👤 客戶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Container -->
+  <div id="app-container" class="hidden">
+    <!-- Header -->
+    <div class="app-header" id="app-header">
+      <button class="back-btn hidden" id="back-btn" onclick="goBack()">
+        <span class="material-icons">arrow_back</span>
+      </button>
+      <h1 id="page-title">首頁</h1>
+    </div>
+
+    <!-- Pages -->
+    <div id="home-page" class="page">
+      <div class="welcome-card">
+        <div class="logo">🐔</div>
+        <h2>麻雞村清遠雞溯源系統</h2>
+        <div class="role-badge" id="welcome-role">示範模式已啟用</div>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action" onclick="showPage('scan')">
+          <span class="material-icons">qr_code_scanner</span>
+          <span>掃描標籤</span>
+        </button>
+        <button class="quick-action" onclick="showPage('upload')">
+          <span class="material-icons">add_circle</span>
+          <span>新增事件</span>
+        </button>
+        <button class="quick-action" onclick="showDemoLabels()">
+          <span class="material-icons">search</span>
+          <span>查詢溯源</span>
+        </button>
+      </div>
+      <div class="demo-labels-title">📋 示範標籤</div>
+      <div id="demo-labels-list"></div>
+    </div>
+
+    <div id="scan-page" class="page hidden">
+      <div class="scan-tabs">
+        <button class="scan-tab active" data-tab="nfc" onclick="switchScanTab('nfc')">📡 NFC感應</button>
+        <button class="scan-tab" data-tab="qr" onclick="switchScanTab('qr')">📷 二維碼</button>
+        <button class="scan-tab" data-tab="manual" onclick="switchScanTab('manual')">⌨️ 手動輸入</button>
+      </div>
+      <div class="scan-content" id="scan-nfc">
+        <div class="scan-icon">📡</div>
+        <div class="scan-instructions">將手機靠近 NFC 標籤</div>
+        <div class="scan-animation">
+          <div class="scan-dot"></div>
+          <div class="scan-dot"></div>
+          <div class="scan-dot"></div>
+        </div>
+        <button class="btn btn-primary" onclick="simulateNFC()">📡 模擬感應</button>
+      </div>
+      <div class="scan-content hidden" id="scan-qr">
+        <div class="scanner-container">
+          <video id="scanner-video" class="scanner-video" autoplay playsinline></video>
+          <div class="scanner-overlay"></div>
+        </div>
+        <select id="camera-select"></select>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="startScanner()">開啟相機</button>
+        <button class="btn btn-outline" onclick="stopScanner()">停止</button>
+      </div>
+      <div class="scan-content hidden" id="scan-manual">
+        <div class="scan-icon">⌨️</div>
+        <div class="scan-instructions">手動輸入 Label ID</div>
+        <div class="input-group" style="text-align:left;margin-top:16px">
+          <input type="text" id="manual-label-id" placeholder="例如：MJV-QY-2025-0001">
+        </div>
+        <button class="btn btn-primary" onclick="lookupLabel()">🔍 查詢</button>
+      </div>
+    </div>
+
+    <div id="result-page" class="page hidden">
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-icon">✅</div>
+          <div class="result-title">標籤識別成功</div>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">Label ID</span>
+          <span class="result-value" id="result-label-id" style="color:var(--primary);font-weight:700"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">產品名稱</span>
+          <span class="result-value" id="result-product-name"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">品種</span>
+          <span class="result-value" id="result-breed"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">產地</span>
+          <span class="result-value" id="result-origin"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">淨重</span>
+          <span class="result-value" id="result-weight"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">養殖天數</span>
+          <span class="result-value" id="result-days"></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">當前狀態</span>
+          <span class="result-value"><span class="status-badge" id="result-status"></span></span>
+        </div>
+        <div class="result-detail">
+          <span class="result-label">最後更新</span>
+          <span class="result-value" id="result-last-update"></span>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-primary" onclick="goToUpload()">
+          <span class="material-icons">add_circle</span> 新增事件
+        </button>
+        <button class="btn btn-outline" onclick="goToTrace()">
+          <span class="material-icons">timeline</span> 查看溯源
+        </button>
+      </div>
+    </div>
+
+    <div id="upload-page" class="page hidden">
+      <div id="offline-notice" class="offline-notice hidden">
+        <span class="material-icons">wifi_off</span>
+        <span>網路不可用，事件將暫存後上傳</span>
+      </div>
+      <div class="form-card">
+        <div class="form-title">📋 事件資訊</div>
+        <div class="form-group">
+          <label class="form-label">標籤 ID *</label>
+          <input type="text" class="form-input" id="upload-label-id" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">事件類型 *</label>
+          <select class="form-select" id="upload-event-type" onchange="updateUploadForm()">
+            <option value="">請選擇事件類型</option>
+          </select>
+          <div class="event-type-list" id="event-type-grid"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">時間 *</label>
+          <input type="datetime-local" class="form-input" id="upload-time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">執行方</label>
+          <input type="text" class="form-input" id="upload-org" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">執行人員</label>
+          <input type="text" class="form-input" id="upload-person" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <textarea class="form-textarea" id="upload-remarks" placeholder="選填"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitEvent()">
+          <span class="material-icons">cloud_upload</span> 提交上傳
+        </button>
+      </div>
+      <div class="form-card" style="margin-top:16px">
+        <div class="form-title">📤 離線暫存</div>
+        <div id="offline-list"></div>
+        <div id="offline-items"></div>
+      </div>
+    </div>
+
+    <div id="trace-page" class="page hidden">
+      <div class="trace-header" id="trace-header">
+        <div class="trace-header-title">
+          <span class="material-icons">🐔</span>
+          <h3 id="trace-product-name">清遠麻雞雞</h3>
+        </div>
+        <div class="trace-info">
+          <div><span class="trace-info-item">Label:</span> <span class="trace-info-value" id="trace-label-id"></span></div>
+          <div><span class="trace-info-item">品種:</span> <span class="trace-info-value" id="trace-breed"></span></div>
+          <div><span class="trace-info-item">產地:</span> <span class="trace-info-value" id="trace-origin"></span></div>
+          <div><span class="trace-info-item">養殖:</span> <span class="trace-info-value" id="trace-days"></span></div>
+          <div><span class="trace-info-item">淨重:</span> <span class="trace-info-value" id="trace-weight"></span></div>
+          <div><span class="trace-info-item">狀態:</span> <span class="trace-info-value"><span class="status-badge" id="trace-status"></span></span></div>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-title">📋 溯源時間軸</div>
+        <div class="timeline" id="trace-timeline"></div>
+      </div>
+      <button class="btn btn-outline" style="margin-top:16px" onclick="shareTrace()">
+        <span class="material-icons">share</span> 分享溯源報告
+      </button>
+    </div>
+
+    <div id="profile-page" class="page hidden">
+      <div class="profile-card">
+        <div class="profile-avatar" id="profile-avatar">👤</div>
+        <div class="profile-name" id="profile-name">黃志偉</div>
+        <div class="profile-role" id="profile-role">餐廳接收員</div>
+        <div class="profile-org" id="profile-org">廣州麻雞村餐廳（天河店）</div>
+        <button class="btn btn-outline" style="margin-top:16px" onclick="showRoleModal()">
+          <span class="material-icons">swap_horiz</span> 切換角色
+        </button>
+      </div>
+      <div class="menu-section">
+        <div class="menu-title" style="padding:12px 16px;font-weight:500;color:var(--text-secondary);font-size:14px">⚙️ 系統設定</div>
+        <button class="menu-item" onclick="showSettings()">
+          <span class="material-icons">settings</span> 系統設定
+          <span class="material-icons menu-item-arrow">chevron_right</span>
+        </button>
+        <button class="menu-item" onclick="showOfflineCache()">
+          <span class="material-icons">storage</span> 離線緩存管理
+          <span class="menu-item-arrow" id="offline-count">0 筆</span>
+        </button>
+        <button class="menu-item" onclick="showAbout()">
+          <span class="material-icons">info</span> 關於系統
+          <span class="material-icons menu-item-arrow">chevron_right</span>
+        </button>
+      </div>
+      <div class="menu-section">
+        <div class="menu-title" style="padding:12px 16px;font-weight:500;color:var(--text-secondary);font-size:14px">📊 示範數據</div>
+        <button class="menu-item" onclick="loadDemoData()">
+          <span class="material-icons">download</span> 載入示範數據
+          <span class="material-icons menu-item-arrow">chevron_right</span>
+        </button>
+        <button class="menu-item" onclick="resetDemoData()">
+          <span class="material-icons">refresh</span> 重置示範數據
+          <span class="material-icons menu-item-arrow">chevron_right</span>
+        </button>
+      </div>
+      <button class="btn btn-logout" style="margin-top:16px" onclick="logout()">
+        <span class="material-icons">logout</span> 登出
+      </button>
+    </div>
+
+    <div id="settings-page" class="page hidden">
+      <div class="form-card">
+        <div class="form-title">⚙️ 系統設定</div>
+        <div class="form-group">
+          <label class="form-label">語言</label>
+          <div class="lang-switch">
+            <button class="lang-btn active" data-lang="zh-TW" onclick="setLanguage('zh-TW')">繁體</button>
+            <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">簡體</button>
+            <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">EN</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">伺服器位址</label>
+          <input type="text" class="form-input" id="server-url" value="demo-server" readonly>
+        </div>
+      </div>
+    </div>
+
+    <div id="about-page" class="page hidden">
+      <div class="form-card">
+        <div class="about-content">
+          <div class="about-logo">🐔</div>
+          <div class="about-title" style="font-size:20px;font-weight:700;margin-bottom:8px">麻雞村清遠雞溯源系統</div>
+          <div class="about-version">版本 v1.0（示範版）</div>
+          <div style="margin-top:24px;text-align:left">
+            <p style="margin-bottom:12px;color:var(--text-secondary)">本系統用於追蹤清遠雞從孵化到上桌的完整供應鏈。</p>
+            <p style="margin-bottom:12px;color:var(--text-secondary)">所有示範數據均為虛構，僅供功能演示用途。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav hidden" id="bottom-nav">
+    <button class="nav-item active" data-page="home" onclick="navigateTo('home')">
+      <span class="material-icons">home</span>
+      <span>首頁</span>
+    </button>
+    <button class="nav-item" data-page="scan" onclick="navigateTo('scan')">
+      <span class="material-icons">qr_code_scanner</span>
+      <span>掃描</span>
+    </button>
+    <button class="nav-item" data-page="upload" onclick="navigateTo('upload')">
+      <span class="material-icons">upload</span>
+      <span>上傳</span>
+    </button>
+    <button class="nav-item" data-page="profile" onclick="navigateTo('profile')">
+      <span class="material-icons">person</span>
+      <span>我的</span>
+    </button>
+  </nav>
+
+  <!-- Role Switch Modal -->
+  <div class="modal-overlay hidden" id="role-modal" onclick="if(event.target===this)closeRoleModal()">
+    <div class="modal">
+      <div class="modal-title">選擇示範角色</div>
+      <div class="role-option" data-role="FARM" onclick="selectRoleOption('FARM')">
+        <div class="role-option-radio"></div>
+        <div class="role-option-text">
+          <div class="role-option-name">🏠 養殖場管理員</div>
+          <div class="role-option-org">清遠市麻雞村養殖基地</div>
+        </div>
+      </div>
+      <div class="role-option" data-role="LOGISTICS" onclick="selectRoleOption('LOGISTICS')">
+        <div class="role-option-radio"></div>
+        <div class="role-option-text">
+          <div class="role-option-name">🚚 物流司機</div>
+          <div class="role-option-org">順豐冷鏈物流</div>
+        </div>
+      </div>
+      <div class="role-option" data-role="RESTAURANT" onclick="selectRoleOption('RESTAURANT')">
+        <div class="role-option-radio"></div>
+        <div class="role-option-text">
+          <div class="role-option-name">🍽️ 餐廳接收員</div>
+          <div class="role-option-org">廣州麻雞村餐廳（天河店）</div>
+        </div>
+      </div>
+      <div class="role-option" data-role="CUSTOMER" onclick="selectRoleOption('CUSTOMER')">
+        <div class="role-option-radio"></div>
+        <div class="role-option-text">
+          <div class="role-option-name">👤 終端客戶</div>
+          <div class="role-option-org">消費者</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="confirmRoleSwitch()">確定</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+    // ===== DATA =====
+    const DEMO_ACCOUNTS = {
+      demo_farm: { password: 'demo123', display_name: '陳志明', role: 'FARM', organization: '清遠市麻雞村養殖基地' },
+      demo_logistics: { password: 'demo123', display_name: '劉海', role: 'LOGISTICS', organization: '順豐冷鏈物流' },
+      demo_restaurant: { password: 'demo123', display_name: '黃志偉', role: 'RESTAURANT', organization: '廣州麻雞村餐廳（天河店）' },
+      demo_customer: { password: 'demo123', display_name: '張先生', role: 'CUSTOMER', organization: '消費者' }
+    };
+
+    const EVENT_TYPES = {
+      EVT_HATCH: { name: '雛雞孵化', roles: ['FARM'] },
+      EVT_VACCINATE: { name: '疫苗接种', roles: ['FARM'] },
+      EVT_FEEDLOG: { name: '飼養日誌', roles: ['FARM'] },
+      EVT_HEALTHCHECK: { name: '健康檢疫', roles: ['FARM'] },
+      EVT_SLAUGHTER: { name: '屠宰加工', roles: ['FARM'] },
+      EVT_PACKAGE: { name: '包裝出庫', roles: ['FARM'] },
+      EVT_LOGISTICS_IN: { name: '物流攬收', roles: ['LOGISTICS'] },
+      EVT_LOGISTICS_HUB: { name: '物流中轉', roles: ['LOGISTICS'] },
+      EVT_LOGISTICS_DELIVER: { name: '物流配送', roles: ['LOGISTICS'] },
+      EVT_RECEIVE: { name: '餐廳接收', roles: ['RESTAURANT'] },
+      EVT_COOK: { name: '烹製上菜', roles: ['RESTAURANT'] },
+      EVT_CUSTOMER_SCAN: { name: '終端客戶查驗', roles: ['CUSTOMER'] }
+    };
+
+    const STATUS_NAMES = {
+      FARMING: '養殖中',
+      SHIPPED: '已出庫',
+      TRANSIT: '運輸中',
+      RECEIVED: '已接收',
+      SERVED: '已上菜'
+    };
+
+    const DEFAULT_DEMO_DATA = {
+      labels: [{
+        label_id: 'MJV-QY-2025-0001',
+        product_name: '清遠麻雞雞',
+        breed: '清遠麻雞',
+        origin: '廣東清遠',
+        weight_kg: 1.5,
+        farming_days: 82,
+        current_status: 'SERVED'
+      }],
+      events: [
+        { event_id: '1', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_HATCH', event_time: '2025-03-01T08:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '陳志明', remarks: '品種：清遠麻雞；批次號 BH-2025-03', created_at: '2025-03-01T08:00:00' },
+        { event_id: '2', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_VACCINATE', event_time: '2025-03-05T09:30:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '李秀蓮', remarks: '新城疫疫苗（第一針）', created_at: '2025-03-05T09:30:00' },
+        { event_id: '3', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_FEEDLOG', event_time: '2025-04-15T10:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '陳志明', remarks: '日齡45天，體重約0.8kg，健康狀況良好', created_at: '2025-04-15T10:00:00' },
+        { event_id: '4', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_VACCINATE', event_time: '2025-04-20T08:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '李秀蓮', remarks: '禽流感疫苗加強針', created_at: '2025-04-20T08:00:00' },
+        { event_id: '5', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_HEALTHCHECK', event_time: '2025-05-20T14:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '王建國', remarks: '檢疫合格，出具《動物檢疫合格證明》編號 GD-2025-0518', created_at: '2025-05-20T14:00:00' },
+        { event_id: '6', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_SLAUGHTER', event_time: '2025-05-22T06:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '張偉', remarks: '活雞屠宰，冷鮮處理，淨重1.5kg', created_at: '2025-05-22T06:00:00' },
+        { event_id: '7', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_PACKAGE', event_time: '2025-05-22T09:00:00', executor_org: '清遠市麻雞村養殖基地', executor_person: '張偉', remarks: '真空包裝，貼NFC/QR標籤，出庫溫度0-4°C', created_at: '2025-05-22T09:00:00' },
+        { event_id: '8', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_LOGISTICS_IN', event_time: '2025-05-22T10:30:00', executor_org: '順豐冷鏈物流', executor_person: '劉海', remarks: '冷鏈車 GZ-8866，車廂溫度2°C', created_at: '2025-05-22T10:30:00' },
+        { event_id: '9', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_LOGISTICS_HUB', event_time: '2025-05-23T03:00:00', executor_org: '順豐冷鏈物流', executor_person: '周強', remarks: '廣州天河冷鏈中轉中心，溫度記錄正常', created_at: '2025-05-23T03:00:00' },
+        { event_id: '10', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_LOGISTICS_DELIVER', event_time: '2025-05-23T07:00:00', executor_org: '順豐冷鏈物流', executor_person: '劉海', remarks: '送達廣州天河區，全程冷鏈溫度0-4°C', created_at: '2025-05-23T07:00:00' },
+        { event_id: '11', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_RECEIVE', event_time: '2025-05-23T09:15:00', executor_org: '廣州麻雞村餐廳（天河店）', executor_person: '黃志偉', remarks: '驗收合格，包裝完整，溫度正常', created_at: '2025-05-23T09:15:00' },
+        { event_id: '12', label_id: 'MJV-QY-2025-0001', event_type: 'EVT_COOK', event_time: '2025-05-23T12:00:00', executor_org: '廣州麻雞村餐廳（天河店）', executor_person: '何國強', remarks: '招牌白切清遠雞，桌號A12', created_at: '2025-05-23T12:00:00' }
+      ]
+    };
+
+    // ===== STATE =====
+    let currentUser = null;
+    let currentLabelId = null;
+    let selectedRole = null;
+    let pendingRoleSwitch = null;
+    let scanner = null;
+    let videoStream = null;
+
+    // ===== INIT =====
+    function init() {
+      loadData();
+      renderDemoLabels();
+      renderEventTypes();
+      checkOnlineStatus();
+    }
+
+    function loadData() {
+      if (!localStorage.getItem('traceability_data')) {
+        localStorage.setItem('traceability_data', JSON.stringify(DEFAULT_DEMO_DATA));
+      }
+    }
+
+    function getData() {
+      return JSON.parse(localStorage.getItem('traceability_data') || JSON.stringify(DEFAULT_DEMO_DATA));
+    }
+
+    function saveData(data) {
+      localStorage.setItem('traceability_data', JSON.stringify(data));
+    }
+
+    function checkOnlineStatus() {
+      const offlineNotice = document.getElementById('offline-notice');
+      if (!navigator.onLine) {
+        offlineNotice.classList.remove('hidden');
+      } else {
+        offlineNotice.classList.add('hidden');
+      }
+    }
+
+    window.addEventListener('online', checkOnlineStatus);
+    window.addEventListener('offline', checkOnlineStatus);
+
+    // ===== AUTH =====
+    function handleLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const account = DEMO_ACCOUNTS[username];
+      if (account && account.password === password) {
+        loginUser({ username, ...account });
+      } else {
+        showToast('帳號或密碼錯誤');
+      }
+    }
+
+    function handleDemoLogin() {
+      if (!selectedRole) {
+        showToast('請先選擇一個角色');
+        return;
+      }
+      const roleMap = {
+        FARM: 'demo_farm',
+        LOGISTICS: 'demo_logistics',
+        RESTAURANT: 'demo_restaurant',
+        CUSTOMER: 'demo_customer'
+      };
+      const username = roleMap[selectedRole];
+      const account = DEMO_ACCOUNTS[username];
+      loginUser({ username, ...account });
+    }
+
+    function selectRole(role) {
+      document.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
+      document.querySelector(`.role-chip[data-role="${role}"]`).classList.add('selected');
+      selectedRole = role;
+    }
+
+    function loginUser(user) {
+      currentUser = user;
+      localStorage.setItem('current_user', JSON.stringify(user));
+      document.getElementById('login-page').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+      document.getElementById('bottom-nav').classList.remove('hidden');
+      updateProfileUI();
+      showPage('home');
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('current_user');
+      document.getElementById('login-page').classList.remove('hidden');
+      document.getElementById('app-container').classList.add('hidden');
+      document.getElementById('bottom-nav').classList.add('hidden');
+      stopScanner();
+    }
+
+    function updateProfileUI() {
+      if (!currentUser) return;
+      document.getElementById('profile-name').textContent = currentUser.display_name;
+      document.getElementById('profile-role').textContent = getRoleName(currentUser.role);
+      document.getElementById('profile-org').textContent = currentUser.organization;
+      document.getElementById('welcome-role').textContent = `當前角色：${getRoleName(currentUser.role)}`;
+      document.getElementById('profile-avatar').textContent = getRoleEmoji(currentUser.role);
+      document.getElementById('upload-org').value = currentUser.organization;
+      document.getElementById('upload-person').value = currentUser.display_name;
+    }
+
+    function getRoleName(role) {
+      const names = { FARM: '養殖場管理員', LOGISTICS: '物流司機', RESTAURANT: '餐廳接收員', CUSTOMER: '終端客戶' };
+      return names[role] || role;
+    }
+
+    function getRoleEmoji(role) {
+      const emojis = { FARM: '🏠', LOGISTICS: '🚚', RESTAURANT: '🍽️', CUSTOMER: '👤' };
+      return emojis[role] || '👤';
+    }
+
+    // ===== NAVIGATION =====
+    function showPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById(`${page}-page`).classList.remove('hidden');
+      document.getElementById('back-btn').classList.add('hidden');
+      document.getElementById('page-title').textContent = {
+        home: '首頁', scan: '掃描標籤', result: '識別結果',
+        upload: '新增事件', trace: '溯源查詢', profile: '我的',
+        settings: '系統設定', about: '關於系統'
+      }[page] || '首頁';
+      
+      if (page === 'upload') {
+        prepareUploadForm();
+      }
+      if (page === 'profile') {
+        updateOfflineCount();
+      }
+    }
+
+    function navigateTo(page) {
+      showPage(page);
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+    }
+
+    function goBack() {
+      if (currentLabelId) {
+        showLabelResult(currentLabelId);
+      } else {
+        showPage('home');
+      }
+    }
+
+    function showRoleModal() {
+      document.getElementById('role-modal').classList.remove('hidden');
+      document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+      document.querySelector(`.role-option[data-role="${currentUser.role}"]`).classList.add('selected');
+      pendingRoleSwitch = currentUser.role;
+    }
+
+    function closeRoleModal() {
+      document.getElementById('role-modal').classList.add('hidden');
+    }
+
+    function selectRoleOption(role) {
+      document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+      document.querySelector(`.role-option[data-role="${role}"]`).classList.add('selected');
+      pendingRoleSwitch = role;
+    }
+
+    function confirmRoleSwitch() {
+      if (pendingRoleSwitch) {
+        const roleMap = {
+          FARM: 'demo_farm', LOGISTICS: 'demo_logistics',
+          RESTAURANT: 'demo_restaurant', CUSTOMER: 'demo_customer'
+        };
+        const username = roleMap[pendingRoleSwitch];
+        const account = DEMO_ACCOUNTS[username];
+        loginUser({ username, ...account });
+        closeRoleModal();
+        showToast('角色已切換');
+      }
+    }
+
+    // ===== DEMO LABELS =====
+    function renderDemoLabels() {
+      const data = getData();
+      const container = document.getElementById('demo-labels-list');
+      container.innerHTML = data.labels.map(label => `
+        <div class="label-card" onclick="lookupLabelById('${label.label_id}')">
+          <div class="label-card-header">
+            <span class="material-icons" style="color:var(--secondary)">🏷️</span>
+            <span class="label-id">${label.label_id}</span>
+          </div>
+          <div class="label-info">${label.product_name} · ${label.weight_kg}kg</div>
+          <div class="label-footer">
+            <span class="status-badge status-${label.current_status.toLowerCase()}">${STATUS_NAMES[label.current_status]}</span>
+            <span style="color:var(--primary);font-size:13px">查看 →</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showDemoLabels() {
+      lookupLabelById('MJV-QY-2025-0001');
+    }
+
+    // ===== SCAN =====
+    function switchScanTab(tab) {
+      document.querySelectorAll('.scan-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.scan-tab[data-tab="${tab}"]`).classList.add('active');
+      document.querySelectorAll('.scan-content').forEach(c => c.classList.add('hidden'));
+      document.getElementById(`scan-${tab}`).classList.remove('hidden');
+      if (tab === 'qr') {
+        initCameraSelect();
+      } else {
+        stopScanner();
+      }
+    }
+
+    function simulateNFC() {
+      showToast('NFC感應中...');
+      setTimeout(() => {
+        lookupLabelById('MJV-QY-2025-0001');
+      }, 1500);
+    }
+
+    function initCameraSelect() {
+      const select = document.getElementById('camera-select');
+      select.innerHTML = '<option value="">載入相機中...</option>';
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const cameras = devices.filter(d => d.kind === 'videoinput');
+        if (cameras.length === 0) {
+          select.innerHTML = '<option value="">找不到相機</option>';
+          return;
+        }
+        select.innerHTML = cameras.map((c, i) => `<option value="${c.deviceId}">相機 ${i + 1}</option>`).join('');
+      });
+    }
+
+    async function startScanner() {
+      const deviceId = document.getElementById('camera-select').value;
+      try {
+        const constraints = { video: { deviceId: deviceId ? { exact: deviceId } : undefined } };
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        document.getElementById('scanner-video').srcObject = videoStream;
+        
+        // Simple QR detection using barcode API
+        if ('BarcodeDetector' in window) {
+          const detector = new BarcodeDetector({ formats: ['qr_code'] });
+          const video = document.getElementById('scanner-video');
+          const detect = async () => {
+            if (!videoStream) return;
+            try {
+              const barcodes = await detector.detect(video);
+              if (barcodes.length > 0) {
+                const value = barcodes[0].rawValue;
+                stopScanner();
+                lookupLabelById(value);
+                return;
+              }
+            } catch (e) {}
+            requestAnimationFrame(detect);
+          };
+          detect();
+        } else {
+          // Fallback: manual entry prompt after 10 seconds
+          setTimeout(() => {
+            if (videoStream) {
+              showToast('請用手動輸入Label ID');
+            }
+          }, 10000);
+        }
+      } catch (err) {
+        showToast('無法開啟相機：' + err.message);
+      }
+    }
+
+    function stopScanner() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+      }
+    }
+
+    function lookupLabel() {
+      const id = document.getElementById('manual-label-id').value.trim().toUpperCase();
+      if (!id) {
+        showToast('請輸入Label ID');
+        return;
+      }
+      lookupLabelById(id);
+    }
+
+    function lookupLabelById(labelId) {
+      const data = getData();
+      const label = data.labels.find(l => l.label_id === labelId);
+      if (!label) {
+        showToast('找不到標籤：' + labelId);
+        return;
+      }
+      currentLabelId = labelId;
+      showLabelResult(labelId);
+    }
+
+    function showLabelResult(labelId) {
+      const data = getData();
+      const label = data.labels.find(l => l.label_id === labelId);
+      if (!label) return;
+
+      document.getElementById('result-label-id').textContent = label.label_id;
+      document.getElementById('result-product-name').textContent = label.product_name;
+      document.getElementById('result-breed').textContent = label.breed;
+      document.getElementById('result-origin').textContent = label.origin;
+      document.getElementById('result-weight').textContent = label.weight_kg + ' kg';
+      document.getElementById('result-days').textContent = label.farming_days + ' 天';
+      document.getElementById('result-status').textContent = STATUS_NAMES[label.current_status];
+      document.getElementById('result-status').className = `status-badge status-${label.current_status.toLowerCase()}`;
+
+      const events = data.events.filter(e => e.label_id === labelId).sort((a, b) => new Date(a.event_time) - new Date(b.event_time));
+      if (events.length > 0) {
+        const last = events[events.length - 1];
+        document.getElementById('result-last-update').textContent = `${formatDateTime(last.event_time)} · ${last.executor_person}`;
+      }
+
+      document.getElementById('upload-label-id').value = labelId;
+      showPage('result');
+    }
+
+    function goToUpload() {
+      prepareUploadForm();
+      navigateTo('upload');
+    }
+
+    function goToTrace() {
+      renderTrace(currentLabelId);
+      navigateTo('trace');
+    }
+
+    // ===== UPLOAD =====
+    function renderEventTypes() {
+      const container = document.getElementById('event-type-grid');
+      const select = document.getElementById('upload-event-type');
+      
+      const types = Object.entries(EVENT_TYPES).map(([code, info]) => ({
+        code, ...info
+      }));
+
+      select.innerHTML = '<option value="">請選擇事件類型</option>' + 
+        types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
+
+      container.innerHTML = types.map(t => `
+        <button class="event-type-item" data-type="${t.code}" onclick="selectEventType('${t.code}')">${t.name}</button>
+      `).join('');
+    }
+
+    function selectEventType(code) {
+      document.querySelectorAll('.event-type-item').forEach(e => e.classList.remove('selected'));
+      document.querySelector(`.event-type-item[data-type="${code}"]`).classList.add('selected');
+      document.getElementById('upload-event-type').value = code;
+      updateUploadForm();
+    }
+
+    function prepareUploadForm() {
+      if (!currentUser) return;
+      document.getElementById('upload-org').value = currentUser.organization;
+      document.getElementById('upload-person').value = currentUser.display_name;
+      document.getElementById('upload-time').value = new Date().toISOString().slice(0, 16);
+      document.getElementById('upload-event-type').value = '';
+      document.getElementById('upload-remarks').value = '';
+      document.querySelectorAll('.event-type-item').forEach(e => e.classList.remove('selected'));
+      renderOfflineList();
+    }
+
+    function updateUploadForm() {
+      // Auto actions after event type selection
+    }
+
+    function submitEvent() {
+      const labelId = document.getElementById('upload-label-id').value;
+      const eventType = document.getElementById('upload-event-type').value;
+      const time = document.getElementById('upload-time').value;
+      const remarks = document.getElementById('upload-remarks').value;
+
+      if (!labelId) {
+        showToast('請先選擇標籤');
+        return;
+      }
+      if (!eventType) {
+        showToast('請選擇事件類型');
+        return;
+      }
+      if (!time) {
+        showToast('請選擇時間');
+        return;
+      }
+
+      const data = getData();
+      const newEvent = {
+        event_id: Date.now().toString(),
+        label_id: labelId,
+        event_type: eventType,
+        event_time: time,
+        executor_org: currentUser.organization,
+        executor_person: currentUser.display_name,
+        remarks: remarks,
+        created_at: new Date().toISOString()
+      };
+
+      if (navigator.onLine) {
+        data.events.push(newEvent);
+        saveData(data);
+        showToast('上傳成功！');
+      } else {
+        // Store in offline queue
+        const offline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        offline.push(newEvent);
+        localStorage.setItem('offline_queue', JSON.stringify(offline));
+        showToast('已暫存，等待網路恢復');
+      }
+
+      // Update label status based on event
+      updateLabelStatus(labelId, eventType);
+      
+      // Reset form
+      prepareUploadForm();
+      renderDemoLabels();
+    }
+
+    function updateLabelStatus(labelId, eventType) {
+      const data = getData();
+      const label = data.labels.find(l => l.label_id === labelId);
+      if (!label) return;
+
+      const statusMap = {
+        EVT_HATCH: 'FARMING', EVT_VACCINATE: 'FARMING', EVT_FEEDLOG: 'FARMING',
+        EVT_HEALTHCHECK: 'FARMING', EVT_SLAUGHTER: 'SHIPPED', EVT_PACKAGE: 'SHIPPED',
+        EVT_LOGISTICS_IN: 'TRANSIT', EVT_LOGISTICS_HUB: 'TRANSIT', EVT_LOGISTICS_DELIVER: 'TRANSIT',
+        EVT_RECEIVE: 'RECEIVED', EVT_COOK: 'SERVED', EVT_CUSTOMER_SCAN: 'SERVED'
+      };
+
+      if (statusMap[eventType]) {
+        label.current_status = statusMap[eventType];
+        saveData(data);
+      }
+    }
+
+    function renderOfflineList() {
+      const offline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+      const container = document.getElementById('offline-items');
+      
+      if (offline.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:16px">暫無離線暫存</div>';
+        return;
+      }
+
+      container.innerHTML = offline.map((e, i) => `
+        <div style="background:#f9f9f9;padding:12px;border-radius:8px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:500">${EVENT_TYPES[e.event_type]?.name || e.event_type}</div>
+              <div style="font-size:13px;color:var(--text-secondary)">${e.label_id} · ${e.executor_person}</div>
+            </div>
+            <button class="btn btn-outline" style="width:auto;padding:6px 12px;font-size:12px" onclick="uploadOfflineEvent(${i})">重試</button>
+          </div>
+        </div>
+      `).join</div>`;
+    }
+
+    async function uploadOfflineEvent(index) {
+      const offline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+      if (offline[index]) {
+        const data = getData();
+        data.events.push(offline[index]);
+        saveData(data);
+        offline.splice(index, 1);
+        localStorage.setItem('offline_queue', JSON.stringify(offline));
+        updateLabelStatus(offline[index].label_id, offline[index].event_type);
+        renderOfflineList();
+        renderDemoLabels();
+        showToast('上傳成功！');
+      }
+    }
+
+    function updateOfflineCount() {
+      const offline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+      document.getElementById('offline-count').textContent = offline.length + ' 筆';
+    }
+
+    // ===== TRACE =====
+    function renderTrace(labelId) {
+      const data = getData();
+      const label = data.labels.find(l => l.label_id === labelId);
+      if (!label) return;
+
+      document.getElementById('trace-product-name').textContent = label.product_name;
+      document.getElementById('trace-label-id').textContent = label.label_id;
+      document.getElementById('trace-breed').textContent = label.breed;
+      document.getElementById('trace-origin').textContent = label.origin;
+      document.getElementById('trace-days').textContent = label.farming_days + ' 天';
+      document.getElementById('trace-weight').textContent = label.weight_kg + ' kg';
+      document.getElementById('trace-status').textContent = STATUS_NAMES[label.current_status];
+      document.getElementById('trace-status').className = `status-badge status-${label.current_status.toLowerCase()}`;
+
+      const events = data.events.filter(e => e.label_id === labelId).sort((a, b) => new Date(a.event_time) - new Date(b.event_time));
+      const timeline = document.getElementById('trace-timeline');
+      
+      timeline.innerHTML = events.map((evt, i) => {
+        const isLatest = i === events.length - 1;
+        const eventInfo = EVENT_TYPES[evt.event_type] || { name: evt.event_type };
+        return `
+          <div class="timeline-item">
+            <div class="timeline-dot ${isLatest ? 'latest' : ''}">${i + 1}</div>
+            <div class="timeline-content">
+              <div class="timeline-title">${eventInfo.name}</div>
+              <div class="timeline-time">${formatDateTime(evt.event_time)}</div>
+              <div class="timeline-org">${evt.executor_org}</div>
+              <div class="timeline-person">${evt.executor_person}</div>
+              ${evt.remarks ? `<div class="timeline-remarks">${evt.remarks}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function shareTrace() {
+      const labelId = currentLabelId;
+      const text = `🐔 麻雞村清遠雞溯源\nLabel: ${labelId}\n查看完整溯源鏈：${window.location.href}`;
+      if (navigator.share) {
+        navigator.share({ title: '溯源報告', text });
+      } else {
+        navigator.clipboard.writeText(text).then(() => showToast('報告已複製'));
+      }
+    }
+
+    // ===== DEMO DATA =====
+    function loadDemoData() {
+      localStorage.setItem('traceability_data', JSON.stringify(DEFAULT_DEMO_DATA));
+      renderDemoLabels();
+      showToast('示範數據已載入');
+    }
+
+    function resetDemoData() {
+      if (confirm('確定要重置所有數據嗎？')) {
+        loadDemoData();
+        localStorage.removeItem('offline_queue');
+        showToast('數據已重置');
+      }
+    }
+
+    // ===== SETTINGS =====
+    function showSettings() {
+      showPage('settings');
+    }
+
+    function showOfflineCache() {
+      navigateTo('upload');
+      showToast('查看上方離線暫存');
+    }
+
+    function showAbout() {
+      showPage('about');
+    }
+
+    function setLanguage(lang) {
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.lang-btn[data-lang="${lang}"]`).classList.add('active');
+      showToast('語言切換：' + lang);
+    }
+
+    // ===== UTILS =====
+    function formatDateTime(isoString) {
+      const d = new Date(isoString);
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function pad(n) { return n < 10 ? '0' + n : n; }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
